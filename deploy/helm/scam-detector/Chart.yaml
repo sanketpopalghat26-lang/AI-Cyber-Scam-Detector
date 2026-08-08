@@ -1,0 +1,65 @@
+# =============================================================================
+# Helm Chart — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v2
+name: scam-detector
+description: Enterprise-grade AI-powered cyber scam detection platform
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+kubeVersion: ">= 1.28.0"
+home: https://scamdetector.example.com
+sources:
+  - https://github.com/organization/ai-cyber-scam-detector
+
+maintainers:
+  - name: Enterprise AI Team
+    email: security@example.com
+    url: https://example.com
+
+dependencies:
+  - name: postgresql
+    version: "~15.5"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+    alias: postgresql
+  - name: redis
+    version: "~19.6"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+    alias: redis
+  - name: prometheus
+    version: "~25.20"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
+    alias: prometheus
+  - name: grafana
+    version: "~7.3"
+    repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled
+    alias: grafana
+  - name: loki
+    version: "~5.47"
+    repository: https://grafana.github.io/helm-charts
+    condition: loki.enabled
+    alias: loki
+  - name: cert-manager
+    version: "~1.15"
+    repository: https://charts.jetstack.io
+    condition: cert-manager.enabled
+    alias: cert-manager
+
+keywords:
+  - cybersecurity
+  - scam-detection
+  - machine-learning
+  - enterprise
+  - ai
+
+annotations:
+  artifacthub.io/changes: |
+    - kind: changed
+      description: Production-grade Helm chart for AI Cyber Scam Detector
+  artifacthub.io/containsSecurityUpdates: "true"
+  artifacthub.io/category: security
+  artifacthub.io/license: Proprietary

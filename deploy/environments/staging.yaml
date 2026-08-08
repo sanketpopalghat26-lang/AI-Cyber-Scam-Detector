@@ -1,0 +1,65 @@
+# =============================================================================
+# Helm Values — Staging Environment
+# Overrides for deploy/helm/scam-detector/values.yaml
+# =============================================================================
+global:
+  environment: staging
+
+backend:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+  ingress:
+    hosts:
+      - host: staging-api.scamdetector.example.com
+    tls:
+      - secretName: scam-detector-backend-tls
+        hosts:
+          - staging-api.scamdetector.example.com
+  env:
+    APP_ENV: staging
+    LOG_LEVEL: INFO
+    CORS_ORIGINS: https://staging-app.scamdetector.example.com
+
+frontend:
+  replicaCount: 2
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 4
+  ingress:
+    hosts:
+      - host: staging-app.scamdetector.example.com
+    tls:
+      - secretName: scam-detector-frontend-tls
+        hosts:
+          - staging-app.scamdetector.example.com
+
+postgresql:
+  primary:
+    persistence:
+      size: 10Gi
+
+redis:
+  master:
+    persistence:
+      size: 5Gi
+
+prometheus:
+  server:
+    retention: 15d
+
+grafana:
+  persistence:
+    size: 10Gi
+
+loki:
+  persistence:
+    size: 10Gi

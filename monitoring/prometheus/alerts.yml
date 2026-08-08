@@ -1,0 +1,153 @@
+# =============================================================================
+# Prometheus Alert Rules — AI Cyber Scam Detector
+# Alerts for availability, latency, errors, saturation, and business metrics.
+# Referenced by deploy/k8s/prometheus-rules.yaml and Prometheus rule_files.
+# =============================================================================
+groups:
+  - name: availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Backend service is down"
+          description: "The backend service {{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+          / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High 5xx error rate ({{ $value | humanizePercentage }})"
+          description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."
+
+  - name: latency
+    rules:
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+          > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "p95 latency exceeds 1 second ({{ $value }}s)"
+          description: "The 95th percentile of request latency is above 1 second."
+
+      - alert: HighPredictionLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(prediction_duration_seconds_bucket[5m])) by (le))
+          > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "p95 prediction latency exceeds 500ms"
+          description: "Model prediction latency is degrading."
+
+  - name: saturation
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage ({{ $value | humanizePercentage }})"
+          description: "CPU usage is above 85% on instance {{ $labels.instance }}."
+
+  - name: business
+    rules:
+      - alert: HighScamDetectionRate
+        expr: |
+          sum(rate(predictions_total{label="scam"}[5m]))
+          / sum(rate(predictions_total[5m])) > 0.5
+        for: 15m
+        labels:
+          severity: info
+          team: security
+        annotations:
+          summary: "High scam detection rate ({{ $value | humanizePercentage }})"
+          description: "More than 50% of predictions are classified as scam — possible campaign."
+
+  - name: reliability
+    rules:
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "A circuit breaker has opened, indicating a failing dependency."
+
+  - name: database
+    rules:
+      - alert: DatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database is down"
+          description: "The PostgreSQL database is unreachable."
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          sum(pg_stat_activity_count{datname=~"scamdb|scamdb_prod"})
+          /
+          (sum(pg_settings_max_connections) * 0.9) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "The database connection pool is above 90% of capacity."
+
+  - name: cache
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis is down"
+          description: "The Redis cache is unreachable."
+
+  - name: kubernetes
+    rules:
+      - alert: PodCrashLooping
+        expr: kube_pod_container_status_restarts_total > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pod is crash-looping ({{ $labels.pod }})"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 5 times."
+
+      - alert: HPAAtMaxReplicas
+        expr: kube_horizontalpodautoscaler_status_current_replicas == kube_horizontalpodautoscaler_spec_max_replicas
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HPA at max replicas ({{ $labels.horizontalpodautoscaler }})"
+          description: "The HorizontalPodAutoscaler is at its maximum replica count."

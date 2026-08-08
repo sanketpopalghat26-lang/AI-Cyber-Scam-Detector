@@ -1,0 +1,90 @@
+# =============================================================================
+# Backup CronJob — AI Cyber Scam Detector
+# Automated database backups with retention policy
+# =============================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scam-detector-db-backup
+  namespace: scam-detector
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: OnFailure
+          priorityClassName: scam-detector-low
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            fsGroup: 1001
+          containers:
+            - name: backup
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  BACKUP_FILE="scamdb-${TIMESTAMP}.dump"
+                  echo "Starting database backup: ${BACKUP_FILE}"
+
+                  # Dump the database
+                  pg_dump \
+                    --dbname="$DATABASE_URL" \
+                    --format=custom \
+                    --compress=9 \
+                    --file="/backups/${BACKUP_FILE}"
+
+                  # Encrypt backup with age/gpg if key provided
+                  if [ -n "$BACKUP_PUBLIC_KEY" ]; then
+                    echo "Encrypting backup with age..."
+                    age -r "$BACKUP_PUBLIC_KEY" -o "/backups/${BACKUP_FILE}.age" "/backups/${BACKUP_FILE}"
+                    rm "/backups/${BACKUP_FILE}"
+                  fi
+
+                  # Prune old backups (keep last 7)
+                  echo "Pruning backups older than 7 days..."
+                  find /backups -name "scamdb-*.dump*" -mtime +7 -delete
+
+                  echo "Backup complete: ${BACKUP_FILE}"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: backend-secrets
+                      key: DATABASE_URL
+                - name: BACKUP_PUBLIC_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: backup-env
+                      key: BACKUP_PUBLIC_KEY
+                      optional: true
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: db-backups-pvc

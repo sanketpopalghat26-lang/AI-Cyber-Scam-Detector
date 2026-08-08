@@ -1,0 +1,39 @@
+# =============================================================================
+# Pod Disruption Budgets — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend-pdb
+  namespace: scam-detector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: scam-detector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: frontend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: db-pdb
+  namespace: scam-detector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: database
+

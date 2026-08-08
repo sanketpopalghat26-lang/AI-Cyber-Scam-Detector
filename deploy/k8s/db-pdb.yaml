@@ -1,0 +1,27 @@
+# =============================================================================
+# Database PodDisruptionBudget — AI Cyber Scam Detector
+# Ensures database availability during voluntary disruptions
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: scam-detector-db-pdb
+  namespace: scam-detector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: database
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: scam-detector-redis-pdb
+  namespace: scam-detector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: cache

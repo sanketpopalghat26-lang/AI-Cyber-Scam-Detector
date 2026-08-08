@@ -1,0 +1,61 @@
+# =============================================================================
+# ServiceMonitor — AI Cyber Scam Detector
+# Enables Prometheus Operator to scrape backend metrics automatically
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: scam-detector-backend
+  namespace: scam-detector
+  labels:
+    app: scam-detector
+    tier: backend
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: backend
+  namespaceSelector:
+    matchNames:
+      - scam-detector
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 10s
+      scrapeTimeout: 8s
+      honorLabels: true
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+          action: replace
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+          action: replace
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+          action: replace
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: scam-detector-frontend
+  namespace: scam-detector
+  labels:
+    app: scam-detector
+    tier: frontend
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: scam-detector
+      tier: frontend
+  namespaceSelector:
+    matchNames:
+      - scam-detector
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 8s
+      honorLabels: true

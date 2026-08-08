@@ -1,0 +1,65 @@
+# =============================================================================
+# Helm Values — Production Environment
+# Overrides for deploy/helm/scam-detector/values.yaml
+# =============================================================================
+global:
+  environment: production
+
+backend:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 10
+  ingress:
+    hosts:
+      - host: api.scamdetector.example.com
+    tls:
+      - secretName: scam-detector-backend-tls
+        hosts:
+          - api.scamdetector.example.com
+  env:
+    APP_ENV: production
+    LOG_LEVEL: INFO
+    CORS_ORIGINS: https://app.scamdetector.example.com
+
+frontend:
+  replicaCount: 3
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 6
+  ingress:
+    hosts:
+      - host: app.scamdetector.example.com
+    tls:
+      - secretName: scam-detector-frontend-tls
+        hosts:
+          - app.scamdetector.example.com
+
+postgresql:
+  primary:
+    persistence:
+      size: 50Gi
+
+redis:
+  master:
+    persistence:
+      size: 10Gi
+
+prometheus:
+  server:
+    retention: 30d
+
+grafana:
+  persistence:
+    size: 20Gi
+
+loki:
+  persistence:
+    size: 20Gi

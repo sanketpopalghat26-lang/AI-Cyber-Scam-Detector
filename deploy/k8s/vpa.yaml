@@ -1,0 +1,53 @@
+# =============================================================================
+# Vertical Pod Autoscaler — AI Cyber Scam Detector
+# Recommends and optionally applies vertical resource adjustments
+# =============================================================================
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: scam-detector-backend-vpa
+  namespace: scam-detector
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scam-detector-backend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        minAllowed:
+          cpu: 200m
+          memory: 256Mi
+        maxAllowed:
+          cpu: "2"
+          memory: 2Gi
+        controlledResources:
+          - cpu
+          - memory
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: scam-detector-frontend-vpa
+  namespace: scam-detector
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scam-detector-frontend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: frontend
+        minAllowed:
+          cpu: 50m
+          memory: 64Mi
+        maxAllowed:
+          cpu: "1"
+          memory: 512Mi
+        controlledResources:
+          - cpu
+          - memory

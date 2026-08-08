@@ -1,0 +1,16 @@
+# =============================================================================
+# Grafana Dashboard Provisioning
+# =============================================================================
+apiVersion: 1
+
+providers:
+  - name: 'AI Cyber Scam Detector'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    editable: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards
+

@@ -1,0 +1,19 @@
+# =============================================================================
+# Frontend Service — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "scam-detector.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "scam-detector.frontend.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "scam-detector.frontend.selectorLabels" . | nindent 4 }}

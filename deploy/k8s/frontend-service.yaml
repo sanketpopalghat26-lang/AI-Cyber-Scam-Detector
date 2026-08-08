@@ -1,0 +1,25 @@
+# =============================================================================
+# Frontend Service — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: scam-detector
+  labels:
+    app: scam-detector
+    tier: frontend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: scam-detector
+    tier: frontend
+

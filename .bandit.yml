@@ -1,0 +1,32 @@
+# =============================================================================
+# Bandit Security Configuration
+# =============================================================================
+skips:
+  - B101  # Allow assert statements (used in tests)
+  - B311  # Allow standard random (used for non-crypto purposes)
+  - B324  # Allow md5/sha1 (used for non-crypto hashing)
+  - B603  # Allow subprocess without shell=True
+
+exclude_dirs:
+  - tests
+  - node_modules
+  - .venv
+  - venv
+  - __pycache__
+  - .git
+  - .github
+  - mlruns
+  - logs
+
+targets:
+  - backend
+  - enterprise_pipeline
+
+confidence:
+  - HIGH
+  - MEDIUM
+
+severity:
+  - HIGH
+  - MEDIUM
+

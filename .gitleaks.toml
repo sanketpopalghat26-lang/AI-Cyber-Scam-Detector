@@ -1,0 +1,69 @@
+# =============================================================================
+# Gitleaks Configuration — AI Cyber Scam Detector
+# Secret scanning rules for the repository
+# =============================================================================
+title = "AI Cyber Scam Detector Gitleaks Config"
+
+[extend]
+useDefault = true
+
+# Custom secret patterns
+[[rules]]
+id = "scam-detector-secret-key"
+description = "AI Cyber Scam Detector SECRET_KEY"
+regex = '''SECRET_KEY\s*[=:]\s*['"]?[a-zA-Z0-9+/=_-]{32,}['"]?'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["SECRET_KEY"]
+
+[[rules]]
+id = "scam-detector-db-password"
+description = "AI Cyber Scam Detector Database password"
+regex = '''POSTGRES_PASSWORD\s*[=:]\s*['"]?[a-zA-Z0-9+/=_-]{8,}['"]?'''
+secretGroup = 1
+entropy = 3.0
+keywords = ["POSTGRES_PASSWORD"]
+
+[[rules]]
+id = "scam-detector-redis-password"
+description = "AI Cyber Scam Detector Redis password"
+regex = '''REDIS_PASSWORD\s*[=:]\s*['"]?[a-zA-Z0-9+/=_-]{8,}['"]?'''
+secretGroup = 1
+entropy = 3.0
+keywords = ["REDIS_PASSWORD"]
+
+[[rules]]
+id = "scam-detector-jwt-secret"
+description = "AI Cyber Scam Detector JWT secret"
+regex = '''JWT_SECRET\s*[=:]\s*['"]?[a-zA-Z0-9+/=_-]{32,}['"]?'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["JWT_SECRET"]
+
+[[rules]]
+id = "scam-detector-api-key"
+description = "AI Cyber Scam Detector API key"
+regex = '''(?:API_KEY|API_TOKEN|X-API-Key|X_API_KEY)\s*[=:]\s*['"]?[a-zA-Z0-9+/=_-]{16,}['"]?'''
+secretGroup = 1
+entropy = 3.0
+keywords = ["API_KEY", "API_TOKEN", "X-API-Key", "X_API_KEY"]
+
+# Allowlist: paths that are safe to commit
+[allowlist]
+description = "Allowlist for non-secret values and test fixtures"
+paths = [
+  '''(^|/)dev\.db$''',
+  '''(^|/)(test\.db|test\.sqlite)$''',
+  '''(^|/)\.git/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+]
+
+# Test data that look like secrets but are inert
+regexes = [
+  '''test-secret-key-for-ci''',
+  '''dev-secret-key-do-not-use-in-prod''',
+  '''scam_pass''',
+  '''scam_user''',
+  '''example\.com''',
+]

@@ -1,0 +1,121 @@
+{
+  "family": "scam-detector-backend",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/scam-detector-backend-task",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/scam-detector-backend-execution",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE", "EC2"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "ghcr.io/organization/scam-detector-backend:latest",
+      "essential": true,
+      "readonlyRootFilesystem": true,
+      "privileged": false,
+      "user": "appuser:appuser",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp",
+          "name": "backend-8000"
+        }
+      ],
+      "environment": [
+        { "name": "APP_ENV", "value": "production" },
+        { "name": "LOG_LEVEL", "value": "INFO" },
+        { "name": "ENABLE_METRICS", "value": "true" },
+        { "name": "ENABLE_CACHE", "value": "true" },
+        { "name": "ENABLE_CSRF", "value": "true" },
+        { "name": "SESSION_COOKIE_SECURE", "value": "true" },
+        { "name": "CORS_ORIGINS", "value": "https://app.scamdetector.example.com" },
+        { "name": "TRUSTED_HOSTS", "value": "api.scamdetector.example.com" },
+        { "name": "PROMETHEUS_MULTIPROC_DIR", "value": "/tmp" }
+      ],
+      "secrets": [
+        { "name": "SECRET_KEY", "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/scam-detector/SECRET_KEY" },
+        { "name": "DATABASE_URL", "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/scam-detector/DATABASE_URL" },
+        { "name": "REDIS_URL", "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/scam-detector/REDIS_URL" },
+        { "name": "REDIS_PASSWORD", "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/scam-detector/REDIS_PASSWORD" },
+        { "name": "CSRF_SECRET", "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/scam-detector/CSRF_SECRET" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/scam-detector-backend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "backend",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health/live || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "linuxParameters": {
+        "initProcessEnabled": true,
+        "sharedMemorySize": 256
+      },
+      "resourceRequirements": [],
+      "volumesFrom": [],
+      "mountPoints": [
+        {
+          "sourceVolume": "model-data",
+          "containerPath": "/app/model",
+          "readOnly": true
+        },
+        {
+          "sourceVolume": "tmp-data",
+          "containerPath": "/tmp"
+        }
+      ],
+      "systemControls": [
+        {
+          "namespace": "net.core.somaxconn",
+          "value": "16384"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "model-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXX",
+        "rootDirectory": "/models",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-XXXXXXXX",
+          "iam": "ENABLED"
+        }
+      }
+    },
+    {
+      "name": "tmp-data",
+      "host": {}
+    }
+  ],
+  "placementConstraints": [],
+  "tags": [
+    { "key": "Name", "value": "scam-detector-backend" },
+    { "key": "Environment", "value": "production" },
+    { "key": "ManagedBy", "value": "terraform" }
+  ],
+  "proxyConfiguration": {
+    "type": "APPMESH",
+    "containerName": "envoy",
+    "properties": {
+      "AppPorts": "8000",
+      "ProxyEgressPort": "15001",
+      "ProxyIngressPort": "15000",
+      "IgnoredUID": "1337",
+      "IgnoredGID": "1337",
+      "EgressIgnoredIPs": "169.254.170.2,169.254.169.254",
+      "AppNetwork": "awsvpc"
+    }
+  },
+  "inferenceAccelerators": []
+}

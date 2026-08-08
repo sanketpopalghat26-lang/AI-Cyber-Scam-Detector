@@ -1,0 +1,200 @@
+# =============================================================================
+# AI Cyber Scam Detector - Project Configuration
+# =============================================================================
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-cyber-scam-detector"
+version = "2.0.0"
+description = "Enterprise-grade AI-powered cyber scam detection platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Proprietary"}
+keywords = ["cyber-security", "scam-detection", "machine-learning", "enterprise"]
+
+authors = [
+    {name = "Enterprise AI Team", email = "security@example.com"},
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# =============================================================================
+# Tool: Ruff (Linter)
+# =============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "S",    # bandit security
+    "B",    # bugbear
+    "A",    # builtins
+    "C4",   # comprehensions
+    "DTZ",  # datetime timezone
+    "T10",  # debugging
+    "SIM",  # simplify
+    "TID",  # tidy imports
+]
+ignore = [
+    "E501",    # line too long (handled by formatter)
+    "S101",    # asserts allowed
+    "B008",    # Depends() in function defaults (FastAPI pattern)
+    "TID252",  # relative imports from parent modules (valid for package structure)
+    "N806",    # non-lowercase variable name in ML code
+    "N803",    # argument name convention in ML code
+    "S105",    # possible hardcoded password (token_type/class_vars)
+    "S106",    # possible hardcoded password arg (token_type)
+    "S110",    # try-except-pass (acceptable fallback)
+    "S301",    # pickle usage (cache serialization)
+    "S311",    # standard random (jitter/non-crypto)
+    "S324",    # md5 usage (cache key generation)
+    "S607",    # partial executable path
+    "B904",    # raise from err (simple retry)
+    "A002",    # builtin shadowing (ML context)
+    "B007",    # loop variable not used
+    "B905",    # zip without strict
+"DTZ003",  # datetime.utcnow legacy
+    "F841",    # unused variable (ML placeholders)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# UP042 (`class X(str, Enum)` -> StrEnum) is intentionally kept for SQLModel
+# ORM compatibility. SQLModel stores enum values as strings and mixing StrEnum
+# can change str()/JSON serialization behavior, risking data integrity issues
+# with existing database migrations and enum columns.
+"backend/app/*/models.py" = ["UP042"]
+"enterprise_pipeline/domain/models.py" = ["UP042"]
+
+# Test files use concise idioms that are intentional and idiomatic:
+# - E731: assigning lambdas as test tasks
+# - SIM105/SIM117: try-except-pass for optional-dependency guards and
+#   nested patch() context managers for mocking (clearer, more readable)
+# - F401/F811: import-for-availability checks and redefinition to reset
+#   module-level singletons between tests
+# - S608: string-built SQL is intentional in integration/cleanup fixtures
+# - B017: asserting on a broad Exception is intentional (testing uniqueness
+#   constraints / DB errors)
+"tests/**/test_*.py" = ["E731", "SIM105", "SIM117", "F401", "F811", "S608", "B017"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# =============================================================================
+# Tool: mypy (Static Type Checker)
+# =============================================================================
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sklearn.*",
+    "xgboost.*",
+    "joblib.*",
+    "loguru.*",
+    "passlib.*",
+    "jose.*",
+    "sqlmodel.*",
+    "prometheus_client.*",
+]
+ignore_missing_imports = true
+
+# =============================================================================
+# Tool: pytest
+# =============================================================================
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*", "*test*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--no-header",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security tests",
+    "e2e: marks tests as end-to-end tests",
+]
+
+[tool.coverage.run]
+source = ["backend", "enterprise_pipeline"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/migrations/*",
+]
+concurrency = ["thread"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "class .*\\bProtocol\\b",
+    "@abstractmethod",
+]
+show_missing = true
+skip_covered = false
+
+# =============================================================================
+# Tool: isort
+# =============================================================================
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+# =============================================================================
+# Tool: bandit
+# =============================================================================
+[tool.bandit]
+exclude = [
+    "/tests/",
+    "/node_modules/",
+    "/.venv/",
+]
+skips = [
+    "B101",  # assert statements
+    "B311",  # random usage
+    "B603",  # subprocess without shell
+]

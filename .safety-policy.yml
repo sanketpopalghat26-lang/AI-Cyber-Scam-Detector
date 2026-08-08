@@ -1,0 +1,26 @@
+# =============================================================================
+# Safety Policy Configuration
+# =============================================================================
+# This file defines which CVEs are ignored and why.
+# All ignored vulnerabilities must be documented with justification.
+# =============================================================================
+version: '1'
+
+security-updates: true
+
+ignore-cvss-vulnerabilities:
+  # High severity but requires local access and authentication
+  - CVE-2023-1234:
+      reason: "Requires local system access and valid credentials. Not applicable to our deployment model."
+      expires: "2025-12-31"
+  
+  # Medium severity with no exploit available
+  - CVE-2023-5678:
+      reason: "No known exploit. Will be addressed in next dependency update cycle."
+      expires: "2024-06-30"
+
+ignore-cvss-severity:
+  # Ignore low severity vulnerabilities
+  - reason: "Low severity vulnerabilities are accepted and tracked for next update cycle."
+    severity: "low"
+

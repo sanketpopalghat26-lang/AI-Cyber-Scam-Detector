@@ -1,0 +1,10 @@
+scikit-learn
+pandas
+joblib
+nltk
+requests
+beautifulsoup4
+xgboost
+sentence-transformers
+transformers
+shap

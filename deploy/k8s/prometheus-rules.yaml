@@ -1,0 +1,152 @@
+# =============================================================================
+# PrometheusRule — AI Cyber Scam Detector
+# SLO/SLA alerting rules for production monitoring
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: scam-detector-alerts
+  namespace: scam-detector
+  labels:
+    app: scam-detector
+    release: prometheus
+spec:
+  groups:
+    - name: scam-detector-availability
+      rules:
+        - alert: BackendDown
+          expr: up{job="backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Backend service is down"
+            description: "Backend pod {{ $labels.pod }} has been down for more than 2 minutes."
+        - alert: FrontendDown
+          expr: up{job="frontend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Frontend service is down"
+            description: "Frontend pod {{ $labels.pod }} has been down for more than 2 minutes."
+
+    - name: scam-detector-performance
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "High 5xx error rate"
+            description: "The 5xx error rate has exceeded 5% for 5 minutes."
+        - alert: HighLatencyP99
+          expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "P99 latency above 2 seconds"
+            description: "The P99 latency has exceeded 2 seconds for 5 minutes."
+        - alert: SlowPredictions
+          expr: histogram_quantile(0.95, sum(rate(prediction_duration_seconds_bucket[5m])) by (le)) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            team: ml
+          annotations:
+            summary: "Slow model predictions"
+            description: "95th percentile prediction latency above 500ms."
+
+    - name: scam-detector-resources
+      rules:
+        - alert: HighCPUUsage
+          expr: |
+            avg(rate(process_cpu_seconds_total[5m])) by (pod) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High CPU usage"
+            description: "Pod {{ $labels.pod }} is using over 80% CPU."
+        - alert: HighMemoryUsage
+          expr: |
+            (sum(process_resident_memory_bytes) by (pod) / 1073741824) > 1.0
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High memory usage"
+            description: "Pod {{ $labels.pod }} is using over 1Gi memory."
+
+    - name: scam-detector-database
+      rules:
+        - alert: DatabaseConnectionExhausted
+          expr: db_connections_active > 40
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Database connection pool exhausted"
+            description: "Active database connections exceeded 40 for 5 minutes."
+        - alert: HighDBLatency
+          expr: histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le)) > 1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High database latency"
+            description: "95th percentile DB query latency above 1s."
+
+    - name: scam-detector-security
+      rules:
+        - alert: BruteForceAttempt
+          expr: sum(rate(auth_attempts_total{result="failure"}[5m])) > 10
+          for: 5m
+          labels:
+            severity: critical
+            team: security
+          annotations:
+            summary: "Possible brute-force attack"
+            description: "More than 10 failed authentication attempts per 5 minutes."
+        - alert: ScamDetectionSpike
+          expr: sum(rate(predictions_total{label="scam"}[5m])) > 100
+          for: 10m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Spike in scam detections"
+            description: "Unusual spike in scam predictions. Review threat intelligence."
+
+    - name: scam-detector-kubernetes
+      rules:
+        - alert: PodNotHealthy
+          expr: kube_pod_status_phase{phase="Pending"} > 0
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Pod stuck in Pending"
+            description: "A pod has been in Pending state for 10 minutes."
+        - alert: HPAClusterMaxedOut
+          expr: kube_horizontalpodautoscaler_status_current_replicas == kube_horizontalpodautoscaler_spec_max_replicas
+          for: 15m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "HPA at max replicas"
+            description: "An HPA has reached its maximum replica count."

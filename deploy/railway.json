@@ -1,0 +1,109 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "./backend/Dockerfile",
+    "watchPatterns": [
+      "backend/**/*.py",
+      "backend/requirements.txt"
+    ]
+  },
+  "deploy": {
+    "numReplicas": 2,
+    "restartPolicyType": "ALWAYS",
+    "healthcheckPath": "/health/live",
+    "healthcheckTimeout": 30,
+    "healthcheckInterval": 15,
+    "healthcheckRetries": 3,
+    "startupDelaySeconds": 10,
+    "group": "scam-detector",
+    "strategy": "ROLLING",
+    "sleepApplication": false,
+    "network": {
+      "privateNetwork": "scam-detector-network",
+      "publicPort": 8000,
+      "port": 8000,
+      "websocketSupport": false,
+      "ciPort": 8000
+    }
+  },
+  "services": [
+    {
+      "name": "scam-detector-db",
+      "type": "postgresql",
+      "version": "15",
+      "plan": "starter",
+      "volumePath": "/var/lib/postgresql/data",
+      "volumeSizeGb": 10,
+      "highAvailability": true,
+      "backup": {
+        "enabled": true,
+        "schedule": "0 0 * * *",
+        "retentionPeriodDays": 30
+      }
+    },
+    {
+      "name": "scam-detector-redis",
+      "type": "redis",
+      "version": "7",
+      "plan": "starter",
+      "volumePath": "/data",
+      "volumeSizeGb": 5,
+      "persistence": true,
+      "maxMemoryPolicy": "allkeys-lru"
+    },
+    {
+      "name": "scam-detector-backend",
+      "type": "web",
+      "env": {
+        "APP_ENV": "production",
+        "LOG_LEVEL": "INFO",
+        "ENABLE_METRICS": "true",
+        "ENABLE_CACHE": "true",
+        "ENABLE_CSRF": "true",
+        "SESSION_COOKIE_SECURE": "true",
+        "CORS_ORIGINS": "https://app.scamdetector.example.com",
+        "TRUSTED_HOSTS": "api.scamdetector.example.com",
+        "PROMETHEUS_MULTIPROC_DIR": "/tmp",
+        "MODEL_PATH": "/app/model/best_model.joblib",
+        "APP_VERSION": "2.0.0"
+      },
+      "secret": [
+        "SECRET_KEY",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "REDIS_PASSWORD",
+        "CSRF_SECRET"
+      ],
+      "volumes": [
+        {
+          "name": "model-data",
+          "path": "/app/model",
+          "sizeGb": 1
+        }
+      ],
+      "healthcheckPath": "/health/live",
+      "healthcheckTimeout": 30,
+      "healthcheckInterval": 15,
+      "healthcheckRetries": 3,
+      "startupDelaySeconds": 10,
+      "cpu": 1,
+      "memory": 2048
+    },
+    {
+      "name": "scam-detector-frontend",
+      "type": "web",
+      "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "./frontend/Dockerfile"
+      },
+      "env": {
+        "VITE_API_BASE": "https://api.scamdetector.example.com"
+      },
+      "healthcheckPath": "/",
+      "healthcheckTimeout": 15,
+      "cpu": 0.5,
+      "memory": 512
+    }
+  ]
+}

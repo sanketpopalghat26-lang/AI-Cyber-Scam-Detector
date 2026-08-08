@@ -1,0 +1,137 @@
+# =============================================================================
+# Dependabot Configuration — AI Cyber Scam Detector
+# Automated dependency updates with security-first grouping
+# =============================================================================
+version: 2
+
+updates:
+  # --- Python (backend) ---
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      runtime-deps:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "gunicorn"
+          - "pydantic"
+          - "sqlmodel"
+          - "sqlalchemy"
+      ml-deps:
+        patterns:
+          - "scikit-learn"
+          - "xgboost"
+          - "pandas"
+          - "numpy"
+          - "joblib"
+      security-deps:
+        patterns:
+          - "python-jose"
+          - "passlib"
+          - "bcrypt"
+          - "cryptography"
+    ignore:
+      - dependency-name: "bcrypt"
+        versions: [">=5.0.0"]  # Major version may break passlib compat
+
+  # --- Python (model training) ---
+  - package-ecosystem: "pip"
+    directory: "/model"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+
+  # --- Frontend (npm) ---
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      react-deps:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router*"
+      build-deps:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+      lint-deps:
+        patterns:
+          - "eslint"
+          - "prettier"
+          - "typescript"
+
+  # --- Docker (backend) ---
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # --- Docker (frontend) ---
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # --- GitHub Actions ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      all-actions:
+        patterns:
+          - "*"
+
+  # --- Terraform ---
+  - package-ecosystem: "terraform"
+    directory: "/deploy/terraform"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "terraform"

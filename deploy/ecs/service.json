@@ -1,0 +1,65 @@
+{
+  "cluster": "scam-detector-cluster",
+  "serviceName": "scam-detector-backend",
+  "taskDefinition": "scam-detector-backend",
+  "desiredCount": 2,
+  "minHealthyPercent": 100,
+  "maxHealthyPercent": 200,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-XXXXXXXX",
+        "subnet-YYYYYYYY"
+      ],
+      "securityGroups": [
+        "sg-XXXXXXXX"
+      ],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:ACCOUNT_ID:targetgroup/scam-detector/XXXXXXXX",
+      "containerName": "backend",
+      "containerPort": 8000
+    }
+  ],
+  "serviceConnectConfiguration": {
+    "enabled": true,
+    "namespace": "scam-detector",
+    "services": [
+      {
+        "portName": "backend-8000",
+        "discoveryName": "backend",
+        "clientAliases": [
+          {
+            "port": 8000,
+            "dnsName": "backend.scam-detector"
+          }
+        ]
+      }
+    ]
+  },
+  "deploymentConfiguration": {
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    },
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100
+  },
+  "deploymentController": {
+    "type": "ECS"
+  },
+  "enableECSManagedTags": true,
+  "propagateTags": "TASK_DEFINITION",
+  "healthCheckGracePeriodSeconds": 30,
+  "schedulingStrategy": "REPLICA",
+  "enableExecuteCommand": true,
+  "tags": [
+    { "key": "Name", "value": "scam-detector-backend-service" },
+    { "key": "Environment", "value": "production" }
+  ]
+}

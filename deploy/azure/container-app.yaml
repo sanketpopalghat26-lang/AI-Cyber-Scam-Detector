@@ -1,0 +1,152 @@
+# =============================================================================
+# Azure Container App — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: 2024-03-01
+location: eastus
+name: scam-detector-backend
+properties:
+  environmentId: /subscriptions/SUBSCRIPTION_ID/resourceGroups/scam-detector/providers/Microsoft.App/managedEnvironments/scam-detector-env
+  workloadProfile: "Consumption"
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8000
+      transport: http
+      allowInsecure: false
+      traffic:
+        - latestRevision: true
+          weight: 100
+      stickySessions:
+        affinity: none
+      corsPolicy:
+        allowedOrigins:
+          - "https://app.scamdetector.example.com"
+        allowedMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        allowedHeaders:
+          - Authorization
+          - Content-Type
+          - X-Request-ID
+          - X-Correlation-ID
+          - X-Idempotency-Key
+        exposeHeaders:
+          - X-Request-ID
+          - X-RateLimit-Limit
+          - X-RateLimit-Remaining
+        maxAge: 600
+        allowCredentials: true
+    secrets:
+      - name: secret-key
+        value: "{{ .Env.SECRET_KEY }}"
+      - name: database-url
+        value: "{{ .Env.DATABASE_URL }}"
+      - name: redis-url
+        value: "{{ .Env.REDIS_URL }}"
+      - name: redis-password
+        value: "{{ .Env.REDIS_PASSWORD }}"
+      - name: csrf-secret
+        value: "{{ .Env.CSRF_SECRET }}"
+    registries:
+      - server: ghcr.io
+        identity: system
+    dapr:
+      enabled: true
+      appId: scam-detector-backend
+      appPort: 8000
+      appProtocol: http
+    maxInactiveRevisions: 10
+  template:
+    revisionSuffix: v1
+    containers:
+      - image: ghcr.io/organization/scam-detector-backend:latest
+        name: backend
+        env:
+          - name: APP_ENV
+            value: production
+          - name: LOG_LEVEL
+            value: INFO
+          - name: ENABLE_METRICS
+            value: "true"
+          - name: ENABLE_CACHE
+            value: "true"
+          - name: ENABLE_CSRF
+            value: "true"
+          - name: SESSION_COOKIE_SECURE
+            value: "true"
+          - name: CORS_ORIGINS
+            value: "https://app.scamdetector.example.com"
+          - name: TRUSTED_HOSTS
+            value: "api.scamdetector.example.com"
+          - name: PROMETHEUS_MULTIPROC_DIR
+            value: /tmp
+          - name: APP_VERSION
+            value: "{{ .Env.APP_VERSION }}"
+          - name: SECRET_KEY
+            secretRef: secret-key
+          - name: DATABASE_URL
+            secretRef: database-url
+          - name: REDIS_URL
+            secretRef: redis-url
+          - name: REDIS_PASSWORD
+            secretRef: redis-password
+          - name: CSRF_SECRET
+            secretRef: csrf-secret
+        resources:
+          cpu: 1.0
+          memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+        volumeMounts:
+          - name: model-data
+            mountPath: /app/model
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+    volumes:
+      - name: model-data
+        storageType: AzureFile
+        storageName: scam-detector-models
+      - name: tmp
+        storageType: EmptyDir
+    scale:
+      minReplicas: 2
+      maxReplicas: 10
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "50"
+        - name: cpu-scaling
+          custom:
+            type: cpu
+            metadata:
+              type: Utilization
+              value: "70"
+        - name: memory-scaling
+          custom:
+            type: memory
+            metadata:
+              type: Utilization
+              value: "80"
+  tags:
+    environment: production
+    application: scam-detector
+    managed-by: terraform

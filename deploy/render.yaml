@@ -1,0 +1,147 @@
+# =============================================================================
+# Render Blueprint — AI Cyber Scam Detector
+# =============================================================================
+services:
+  - type: web
+    name: scam-detector-backend
+    env: docker
+    region: frankfurt
+    plan: pro_plus
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health/live
+    healthCheckTimeout: 30
+    numInstances: 2
+    scaling:
+      minInstances: 2
+      maxInstances: 10
+      targetMemoryPercent: 75
+      targetCPUPercent: 70
+    pullRequestPreviewsEnabled: false
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_METRICS
+        value: "true"
+      - key: ENABLE_CACHE
+        value: "true"
+      - key: ENABLE_CSRF
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: CORS_ORIGINS
+        value: https://app.scamdetector.example.com
+      - key: TRUSTED_HOSTS
+        value: api.scamdetector.example.com
+      - key: PROMETHEUS_MULTIPROC_DIR
+        value: /tmp
+      - key: MODEL_PATH
+        value: /app/model/best_model.joblib
+      - key: APP_VERSION
+        value: 2.0.0
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromService:
+          type: postgresql
+          name: scam-detector-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: scam-detector-redis
+          property: connectionString
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: CSRF_SECRET
+        sync: false
+    disk:
+      name: model-data
+      mountPath: /app/model
+      sizeGB: 1
+    logStreams:
+      - type: syslog
+        endpoint: ${LOKI_ENDPOINT}
+
+  - type: web
+    name: scam-detector-frontend
+    env: docker
+    region: frankfurt
+    plan: pro
+    dockerfilePath: ./frontend/Dockerfile
+    healthCheckPath: /
+    healthCheckTimeout: 15
+    numInstances: 2
+    scaling:
+      minInstances: 2
+      maxInstances: 6
+      targetMemoryPercent: 75
+      targetCPUPercent: 70
+    pullRequestPreviewsEnabled: false
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: VITE_API_BASE
+        value: https://api.scamdetector.example.com
+
+databases:
+  - name: scam-detector-db
+    plan: pro_plus
+    region: frankfurt
+    databaseName: scamdb
+    user: scam_user
+    postgresMajorVersion: 15
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: allow-all
+    disk:
+      name: db-data
+      sizeGB: 10
+    highAvailability: true
+    backup:
+      enabled: true
+      schedule: "0 0 * * *"
+      retentionPeriod: 30
+
+redis:
+  - name: scam-detector-redis
+    plan: pro_plus
+    region: frankfurt
+    maxmemoryPolicy: allkeys-lru
+    persistence:
+      enabled: true
+      schedule: "*/5 * * * *"
+
+backgroundWorkers:
+  - type: worker
+    name: scam-detector-worker
+    env: docker
+    region: frankfurt
+    plan: pro
+    dockerfilePath: ./backend/Dockerfile
+    numInstances: 1
+    branch: main
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromService:
+          type: postgresql
+          name: scam-detector-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: scam-detector-redis
+          property: connectionString
+    disk:
+      name: worker-data
+      mountPath: /app/data
+      sizeGB: 10

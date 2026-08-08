@@ -1,0 +1,84 @@
+# =============================================================================
+# AI Cyber Scam Detector — Git Ignore
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# --- Environment / Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# --- Testing / Coverage ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+hypothesis/
+.tox/
+*.coverage
+mutation_cache/
+
+# --- Databases ---
+*.db
+*.sqlite
+*.sqlite3
+migration_test.db
+
+# --- Logs ---
+logs/*.log
+logs/*.log.zip
+logs/audit/*.jsonl
+*.log
+
+# --- ML artifacts ---
+mlruns/
+models/registry/
+models/exports/
+artifacts/
+__mlflow_tmp__/
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# --- Terraform ---
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!deploy/environments/*.tfvars
+terraform.tfplan
+
+# --- IDE / Editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# --- OS ---
+Thumbs.db
+Desktop.ini
+
+# --- Docker ---
+*.tmp

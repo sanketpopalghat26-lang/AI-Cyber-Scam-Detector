@@ -1,0 +1,77 @@
+# =============================================================================
+# Kustomize Overlay — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: scam-detector
+
+namePrefix: scam-detector-
+
+commonLabels:
+  app: scam-detector
+  managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  - backend-service.yaml
+  - frontend-service.yaml
+  - db-statefulset.yaml
+  - redis-statefulset.yaml
+  - ingress.yaml
+  - network-policy.yaml
+  - pod-disruption-budget.yaml
+  - hpa.yaml
+  - pvc.yaml
+  - service-account.yaml
+  - service-monitor.yaml
+  - prometheus-rules.yaml
+  - vpa.yaml
+  - priority-class.yaml
+  - db-pdb.yaml
+  - backup-cronjob.yaml
+  - backup-pvc.yaml
+  - kyverno-policies.yaml
+
+configMapGenerator:
+  - name: backend-config
+    files:
+      - configs/backend.env
+  - name: nginx-config
+    files:
+      - ../nginx/nginx.conf
+  - name: prometheus-config
+    files:
+      - ../monitoring/prometheus/prometheus.yml
+
+secretGenerator:
+  - name: backend-secrets
+    env: secrets/backend.env
+    type: Opaque
+  - name: db-secrets
+    env: secrets/db.env
+    type: Opaque
+
+patches:
+  - target:
+      kind: Deployment
+      name: backend
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom
+        value:
+          - configMapRef:
+              name: backend-config
+          - secretRef:
+              name: backend-secrets
+  - target:
+      kind: StatefulSet
+      name: db
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom
+        value:
+          - secretRef:
+              name: db-secrets

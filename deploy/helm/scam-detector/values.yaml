@@ -1,0 +1,394 @@
+# =============================================================================
+# Helm Values — AI Cyber Scam Detector
+# =============================================================================
+
+# Global settings
+global:
+  environment: production
+  imagePullSecrets: []
+  imageRegistry: ghcr.io
+
+# Backend service
+backend:
+  enabled: true
+  name: backend
+  image:
+    repository: organization/scam-detector-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  serviceAccount:
+    create: true
+    name: backend-sa
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: api.scamdetector.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: scam-detector-backend-tls
+        hosts:
+          - api.scamdetector.example.com
+  env:
+    APP_ENV: production
+    LOG_LEVEL: INFO
+    ENABLE_METRICS: "true"
+    ENABLE_CACHE: "true"
+    ENABLE_CSRF: "true"
+    SESSION_COOKIE_SECURE: "true"
+    CORS_ORIGINS: https://app.scamdetector.example.com
+    TRUSTED_HOSTS: api.scamdetector.example.com
+    PROMETHEUS_MULTIPROC_DIR: /tmp
+  secrets:
+    SECRET_KEY: ""
+    DATABASE_URL: ""
+    REDIS_URL: ""
+    REDIS_PASSWORD: ""
+    CSRF_SECRET: ""
+  probes:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 10
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    startup:
+      path: /health/live
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 5
+      failureThreshold: 12
+  volumes:
+    - name: tmp
+      emptyDir:
+        medium: Memory
+    - name: model-data
+      persistentVolumeClaim:
+        claimName: model-data
+  volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: model-data
+      mountPath: /app/model
+      readOnly: true
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: backend
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - backend
+            topologyKey: kubernetes.io/hostname
+  tolerations: []
+  nodeSelector: {}
+
+# Frontend service
+frontend:
+  enabled: true
+  name: frontend
+  image:
+    repository: organization/scam-detector-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: app.scamdetector.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: scam-detector-frontend-tls
+        hosts:
+          - app.scamdetector.example.com
+
+# Database
+postgresql:
+  enabled: true
+  nameOverride: db
+  fullnameOverride: db
+  global:
+    postgresql:
+      auth:
+        username: scam_user
+        database: scamdb
+  primary:
+    persistence:
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    podSecurityContext:
+      runAsNonRoot: true
+    containerSecurityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    initdb:
+      scripts:
+        init.sql: |
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+    extendedConfiguration: |
+      max_connections = 100
+      shared_buffers = 256MB
+      effective_cache_size = 768MB
+      maintenance_work_mem = 64MB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 16MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      work_mem = 2624kB
+      min_wal_size = 1GB
+      max_wal_size = 4GB
+      max_worker_processes = 4
+      max_parallel_workers_per_gather = 2
+      max_parallel_workers = 4
+      max_parallel_maintenance_workers = 2
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+
+# Cache
+redis:
+  enabled: true
+  nameOverride: redis
+  fullnameOverride: redis
+  architecture: standalone
+  auth:
+    enabled: true
+    existingSecret: backend-secrets
+    existingSecretPasswordKey: REDIS_PASSWORD
+  master:
+    persistence:
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    containerSecurityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Monitoring
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 5Gi
+  server:
+    retention: 30d
+    persistence:
+      enabled: true
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+  serviceMonitors:
+    - name: backend
+      selector:
+        matchLabels:
+          app.kubernetes.io/component: backend
+      endpoints:
+        - port: http
+          path: /metrics
+          interval: 10s
+
+grafana:
+  enabled: true
+  adminPassword: ""
+  persistence:
+    enabled: true
+    size: 10Gi
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server:9090
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          access: proxy
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: default
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  dashboards:
+    default:
+      scam-detector-overview:
+        url: https://raw.githubusercontent.com/organization/dashboards/main/scam-detector-overview.json
+      scam-detector-detailed:
+        url: https://raw.githubusercontent.com/organization/dashboards/main/scam-detector-detailed.json
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+loki:
+  enabled: true
+  config:
+    storage:
+      boltdb_shipper:
+        shared_store: filesystem
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+cert-manager:
+  enabled: true
+  installCRDs: true

@@ -1,0 +1,22 @@
+# =============================================================================
+# Backend Service — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "scam-detector.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "scam-detector.backend.labels" . | nindent 4 }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.backend.service.port }}"
+spec:
+  type: {{ .Values.backend.service.type }}
+  ports:
+    - port: {{ .Values.backend.service.port }}
+      targetPort: {{ .Values.backend.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "scam-detector.backend.selectorLabels" . | nindent 4 }}

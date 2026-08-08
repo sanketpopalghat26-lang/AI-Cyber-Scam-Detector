@@ -1,0 +1,18 @@
+# =============================================================================
+# Database Backups PersistentVolumeClaim — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-backups-pvc
+  namespace: scam-detector
+  labels:
+    app: scam-detector
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard

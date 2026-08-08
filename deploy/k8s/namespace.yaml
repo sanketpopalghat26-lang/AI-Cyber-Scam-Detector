@@ -1,0 +1,47 @@
+# =============================================================================
+# Namespace — AI Cyber Scam Detector
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scam-detector
+  labels:
+    name: scam-detector
+    environment: production
+    compliance: soc2
+    owner: platform-team
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: scam-detector-quota
+  namespace: scam-detector
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    persistentvolumeclaims: 10
+    services: 10
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: scam-detector-limits
+  namespace: scam-detector
+spec:
+  limits:
+    - max:
+        cpu: "2"
+        memory: 2Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      type: Container
