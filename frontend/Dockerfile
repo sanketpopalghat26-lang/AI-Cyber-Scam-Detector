@@ -16,7 +16,7 @@ RUN npm run build
 # =============================================================================
 # Stage 2: Runtime — Serve static files via Nginx
 # =============================================================================
-FROM nginx:1.25-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 
 # Security: non-root user
 RUN adduser -D -g '' -u 1001 appuser
