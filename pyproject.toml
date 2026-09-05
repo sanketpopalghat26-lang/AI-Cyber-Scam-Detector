@@ -132,6 +132,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
+pythonpath = [".", "libraries"]
 python_files = ["test_*.py"]
 python_classes = ["Test*", "*Tests"]
 python_functions = ["test_*", "*test*"]
@@ -147,6 +148,7 @@ markers = [
     "unit: marks tests as unit tests",
     "security: marks tests as security tests",
     "e2e: marks tests as end-to-end tests",
+    "asyncio: marks tests as async test functions",
 ]
 
 [tool.coverage.run]

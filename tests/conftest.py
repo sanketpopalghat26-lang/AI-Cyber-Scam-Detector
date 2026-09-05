@@ -24,6 +24,10 @@ try:
     from sqlmodel import Session, text
 
     from backend.app.core.db import engine
+    # Ensure tables exist before interacting with them (SQLite uses a file that
+    # may not have been created yet on a fresh checkout).
+    from backend.app.core.db import init_db
+    init_db()
     with Session(engine) as session:
         session.exec(text("DELETE FROM users"))
         session.commit()

@@ -42,6 +42,7 @@ mutation_cache/
 migration_test.db
 
 # --- Logs ---
+logs/
 logs/*.log
 logs/*.log.zip
 logs/audit/*.jsonl
@@ -50,9 +51,12 @@ logs/audit/*.jsonl
 # --- ML artifacts ---
 mlruns/
 models/registry/
-models/exports/
 artifacts/
 __mlflow_tmp__/
+# Keep the trained model artifact (models/exports/best_model.pkl)
+!models/exports/
+!models/exports/best_model.pkl
+!models/exports/metrics.json
 
 # --- Node / Frontend ---
 node_modules/
@@ -82,3 +86,20 @@ Desktop.ini
 
 # --- Docker ---
 *.tmp
+
+# --- Kilo CLI ---
+.kilo/
+
+# --- Temp/debug scripts ---
+scripts/_*.py
+scripts/audit_validate_all.py
+scripts/test_live_server.py
+scripts/validate_final.py
+
+# --- Build artifacts / zips ---
+**/*.zip
+!**/node_modules/*.zip
+
+# --- Generated docs (can be regenerated) ---
+PRODUCTION_VALIDATION_REPORT.md
+PROJECT_DEMO.md

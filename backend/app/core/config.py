@@ -73,7 +73,18 @@ CACHE_PREDICTION_TTL = int(os.getenv("CACHE_PREDICTION_TTL", "600"))  # 10 minut
 # =============================================================================
 # Model Settings
 # =============================================================================
-MODEL_PATH = os.getenv("MODEL_PATH", "/app/model/best_model.joblib")
+# The authoritative trained artifact is `models/exports/best_model.pkl`
+# (a scikit-learn Pipeline pickled with joblib/pickle). In the container the
+# model directory is mounted read-only at /app/model. We resolve the path
+# relative to the backend package to support local dev and tests, while
+# remaining overridable via the MODEL_PATH environment variable.
+import os as _os
+
+_BACKEND_PKG_DIR = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+# backend/ -> project root (parent of backend/)
+_PROJECT_ROOT = _os.path.dirname(_BACKEND_PKG_DIR)
+_LOCAL_MODEL = _os.path.join(_PROJECT_ROOT, "models", "exports", "best_model.pkl")
+MODEL_PATH = _os.getenv("MODEL_PATH", _LOCAL_MODEL)
 
 # =============================================================================
 # Observability Settings

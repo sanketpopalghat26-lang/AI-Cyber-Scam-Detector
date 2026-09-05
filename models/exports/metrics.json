@@ -1,0 +1,22 @@
+{
+  "accuracy": 0.963302752293578,
+  "precision": 1.0,
+  "recall": 0.95,
+  "f1": 0.9743589743589743,
+  "classes": [
+    "safe",
+    "scam"
+  ],
+  "confusion_matrix": [
+    [
+      58,
+      0
+    ],
+    [
+      8,
+      152
+    ]
+  ],
+  "train_samples": 868,
+  "test_samples": 218
+}

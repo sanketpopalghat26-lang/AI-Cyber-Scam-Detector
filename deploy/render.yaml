@@ -28,18 +28,12 @@ services:
         value: "true"
       - key: ENABLE_CACHE
         value: "true"
-      - key: ENABLE_CSRF
-        value: "true"
-      - key: SESSION_COOKIE_SECURE
-        value: "true"
       - key: CORS_ORIGINS
-        value: https://app.scamdetector.example.com
-      - key: TRUSTED_HOSTS
-        value: api.scamdetector.example.com
+        value: https://scam-detector-frontend.onrender.com
       - key: PROMETHEUS_MULTIPROC_DIR
         value: /tmp
       - key: MODEL_PATH
-        value: /app/model/best_model.joblib
+        value: /app/model/best_model.pkl
       - key: APP_VERSION
         value: 2.0.0
       - key: SECRET_KEY
@@ -56,15 +50,10 @@ services:
           property: connectionString
       - key: REDIS_PASSWORD
         sync: false
-      - key: CSRF_SECRET
-        sync: false
     disk:
       name: model-data
       mountPath: /app/model
       sizeGB: 1
-    logStreams:
-      - type: syslog
-        endpoint: ${LOKI_ENDPOINT}
 
   - type: web
     name: scam-detector-frontend
@@ -85,7 +74,7 @@ services:
     branch: main
     envVars:
       - key: VITE_API_BASE
-        value: https://api.scamdetector.example.com
+        value: https://scam-detector-backend.onrender.com
 
 databases:
   - name: scam-detector-db
@@ -114,34 +103,3 @@ redis:
     persistence:
       enabled: true
       schedule: "*/5 * * * *"
-
-backgroundWorkers:
-  - type: worker
-    name: scam-detector-worker
-    env: docker
-    region: frankfurt
-    plan: pro
-    dockerfilePath: ./backend/Dockerfile
-    numInstances: 1
-    branch: main
-    envVars:
-      - key: APP_ENV
-        value: production
-      - key: LOG_LEVEL
-        value: INFO
-      - key: SECRET_KEY
-        sync: false
-      - key: DATABASE_URL
-        fromService:
-          type: postgresql
-          name: scam-detector-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: scam-detector-redis
-          property: connectionString
-    disk:
-      name: worker-data
-      mountPath: /app/data
-      sizeGB: 10
