@@ -44,9 +44,9 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /deps /usr/local/lib/python3.11/site-packages
 COPY --from=builder --chown=appuser:appuser /usr/local/bin /usr/local/bin
 
-# Copy application code
+# Copy application code (the `app` package contains auth, core, chat, and all
+# enterprise modules; there is no top-level `core` package in the backend.)
 COPY --chown=appuser:appuser app/ ./app/
-COPY --chown=appuser:appuser core/ ./core/
 
 # Make /app/model read-only for the runtime — models are mounted at deploy time
 VOLUME ["/app/model", "/app/data", "/app/logs"]

@@ -45,7 +45,10 @@ from .core.security import (
 from .models import Feedback, Log, Report, Scan, User
 from .schemas import (
     DashboardStats,
+    DetectRequest,
+    DetectResponse,
     FeedbackCreate,
+    ModelInfoResponse,
     PredictRequest,
     PredictResponse,
     RefreshRequest,
@@ -344,9 +347,41 @@ def build_explanation(text: str, label: str, confidence: float, source: str) -> 
     }
 
 
+def _predict_text(text: str) -> tuple[str, float]:
+    """Run prediction on text and return (label, confidence)."""
+    if hasattr(MODEL, "predict_proba"):
+        pred_proba = MODEL.predict_proba([text])[0]
+        classes = list(getattr(MODEL, "classes_", ["safe", "suspicious", "scam"]))
+        # Robust argmax that works for numpy arrays and Python lists
+        try:
+            idx = int(max(range(len(pred_proba)), key=lambda i: pred_proba[i]))
+        except Exception:
+            idx = int(sorted(range(len(pred_proba)), key=lambda i: pred_proba[i])[-1])
+        label = str(classes[idx]) if idx < len(classes) else "suspicious"
+        confidence = float(pred_proba[idx])
+    else:
+        label = str(MODEL.predict([text])[0])
+        confidence = 0.99
+    return label, confidence
+
+
 # =============================================================================
-# Health & Metrics Endpoints
+# Root & Health & Metrics Endpoints
 # =============================================================================
+
+@app.get("/", tags=["observability"])
+async def root() -> dict:
+    """Root endpoint with API information."""
+    return {
+        "name": APP_NAME,
+        "version": APP_VERSION,
+        "environment": APP_ENV,
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health",
+        "model_info": "/api/model-info",
+    }
+
 
 @app.get("/health", tags=["observability"])
 async def health() -> dict:
@@ -360,7 +395,7 @@ async def health() -> dict:
 
 
 # =============================================================================
-# Prediction Endpoint
+# Prediction Endpoints
 # =============================================================================
 
 @app.post("/predict", response_model=PredictResponse, tags=["prediction"])
@@ -392,16 +427,8 @@ async def predict(
     import time
     start_time = time.time()
 
-    # Predict
-    if hasattr(MODEL, "predict_proba"):
-        pred_proba = MODEL.predict_proba([req.text])[0]
-        classes = getattr(MODEL, "classes_", ["safe", "suspicious", "scam"])
-        idx = int(pred_proba.index(max(pred_proba)))
-        label = classes[idx]
-        confidence = float(pred_proba[idx])
-    else:
-        label = str(MODEL.predict([req.text])[0])
-        confidence = 0.99
+    # Predict using the actual ML model
+    label, confidence = _predict_text(req.text)
 
     # Track metrics
     duration = time.time() - start_time
@@ -471,6 +498,137 @@ async def predict(
     )
 
     return result
+
+
+@app.post("/api/predict", response_model=PredictResponse, tags=["prediction"])
+async def api_predict(
+    req: PredictRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> PredictResponse:
+    """Alias for /predict with the same behavior."""
+    return await predict(req, request, session)
+
+
+@app.post("/api/detect", response_model=DetectResponse, tags=["prediction"])
+async def api_detect(
+    req: DetectRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+) -> DetectResponse:
+    """
+    Detect scam content with a simplified response format.
+
+    Returns prediction (SAFE/SCAM/SUSPICIOUS), confidence, risk level, and message.
+    """
+    if not req.text.strip():
+        raise HTTPException(status_code=400, detail="Text must not be empty")
+
+    # Predict using the actual ML model
+    label, confidence = _predict_text(req.text)
+
+    # Map label to uppercase prediction
+    prediction = label.upper()
+
+    # Determine risk level
+    if label == "scam":
+        risk_level = "HIGH"
+        message = "Potential scam detected"
+    elif label == "suspicious":
+        risk_level = "MEDIUM"
+        message = "Suspicious content detected - proceed with caution"
+    else:
+        risk_level = "LOW"
+        message = "No scam indicators detected"
+
+    # Build explanation
+    explanation = build_explanation(req.text, label, confidence, req.source)
+
+    # Get optional user for history tracking
+    current_user = get_optional_user(request, session)
+
+    # Save scan if user is authenticated
+    if current_user is not None:
+        scan = Scan(
+            user_id=current_user.id,
+            input_text=req.text,
+            result=label,
+            confidence=confidence,
+            source=req.source,
+        )
+        session.add(scan)
+        session.commit()
+        session.refresh(scan)
+
+        report = Report(
+            user_id=current_user.id,
+            scan_id=scan.id,
+            title=f"{label.title()} detection report",
+            content=(
+                f"{label} | confidence {confidence:.2f} | "
+                f"keywords: {', '.join(explanation['keywords'])}"
+            ),
+        )
+        session.add(report)
+        session.add(
+            Log(
+                user_id=current_user.id,
+                message=f"Detection '{label}' saved for {current_user.email}",
+            )
+        )
+        session.commit()
+
+    # Audit log
+    get_audit_logger().log(
+        action="model.detect",
+        actor=current_user.email if current_user else "anonymous",
+        resource="prediction",
+        result="success",
+        ip_address=request.client.host if request.client else None,
+        details={"label": label, "confidence": confidence, "source": req.source},
+    )
+
+    return DetectResponse(
+        prediction=prediction,
+        confidence=round(confidence, 3),
+        risk_level=risk_level,
+        message=message,
+        explanation=explanation,
+    )
+
+
+@app.get("/api/model-info", response_model=ModelInfoResponse, tags=["prediction"])
+async def model_info() -> ModelInfoResponse:
+    """Get information about the current ML model."""
+    classes = list(getattr(MODEL, "classes_", ["safe", "suspicious", "scam"]))
+    model_type = type(MODEL).__name__
+
+    # Try to load metrics if available
+    metrics = {}
+    metrics_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "models", "exports", "metrics.json"
+    )
+    if os.path.exists(metrics_path):
+        import json
+        try:
+            with open(metrics_path) as f:
+                metrics = json.load(f)
+        except Exception:
+            pass
+
+    return ModelInfoResponse(
+        model_name="Scam Detection Pipeline",
+        model_type=model_type,
+        version=APP_VERSION,
+        classes=classes,
+        accuracy=metrics.get("accuracy"),
+        precision=metrics.get("precision"),
+        recall=metrics.get("recall"),
+        f1_score=metrics.get("f1"),
+        trained_samples=metrics.get("train_samples"),
+        status="loaded" if hasattr(MODEL, "predict_proba") else "fallback",
+    )
 
 
 # =============================================================================
@@ -638,7 +796,7 @@ def current_user(user: User = Depends(get_current_user)) -> UserOut:
 
 @app.get("/dashboard", response_model=DashboardStats, tags=["analytics"])
 def dashboard(session: Session = Depends(get_session)) -> DashboardStats:
-    """Get dashboard statistics (public)."""
+    """Get dashboard statistics (global)."""
     cache = get_cache()
     cache_key = "dashboard:stats"
 

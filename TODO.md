@@ -1,41 +1,27 @@
-# Enterprise Transformation TODO — Phase 6/8 + Guardrails
+# Production Certification Re-Audit — Task Tracker
 
-## Phase 6: Enterprise Notification Center
-- [ ] Create `backend/app/notifications/config.py`
-- [ ] Create `backend/app/notifications/models.py` (Notification, NotificationPreference, NotificationChannel)
-- [ ] Create `backend/app/notifications/schemas.py`
-- [ ] Create `backend/app/notifications/service.py` (in-app, email, websocket, retry queue, history)
-- [ ] Create `backend/app/notifications/router.py` (`/api/notifications`)
-- [ ] Create `backend/app/notifications/__init__.py`
-- [ ] Create Alembic migration `0004_notifications.py`
-- [ ] Tests: `tests/notifications/` (models, service, api)
+## Approved Plan
 
-## Phase 8: Executive Dashboard
-- [ ] Create `backend/app/executive/config.py`
-- [ ] Create `backend/app/executive/service.py` (threat analytics, trends, AI metrics, guardrail metrics, system health, security events)
-- [ ] Create `backend/app/executive/schemas.py`
-- [ ] Create `backend/app/executive/router.py` (`/api/executive`)
-- [ ] Create `backend/app/executive/__init__.py`
-- [ ] Tests: `tests/executive/` (service, api)
+- [x] **Phase 1 — Repository Discovery** (architecture map, evidence gathering)
+- [x] **Plan approved** by user
 
-## AI Guardrails Integration (Centralized)
-- [ ] Create `backend/app/core/ai_guardrail_service.py` (inject/jailbreak/PII/toxicity/sanitize/confidence/risk/audit + Prometheus)
-- [ ] Add guardrail Prometheus metrics to `observability.py`
-- [ ] Create `backend/app/core/guardrail_middleware.py` (centralized pipeline middleware)
-- [ ] Register guardrail middleware + routers in `main.py`
-- [ ] Update `alembic/env.py` to import new models
+## Fixes (in approved order)
 
-## Testing & Validation
-- [ ] Unit / integration / API / security / regression tests
-- [ ] Run Ruff, Black, isort, Bandit, Pytest, Coverage
-- [ ] Verify all tests pass, target >= 90% coverage
+- [ ] **A** — Fix backend Dockerfile: `COPY core/ ./core/` → remove broken line (core lives at `app/core/`)
+- [ ] **B** — Make `models/exports/best_model.pkl` the authoritative model artifact; fix model path resolution
+- [ ] **C** — Initialize test database in `tests/conftest.py` (call `init_db()`)
+- [ ] **D** — Re-run complete backend test suite (non-`-x`)
+- [ ] **E** — Validate Docker build, Docker Compose, deployment manifests
+- [ ] **F** — Run quality gates: ruff, black, isort, mypy, bandit
+- [ ] **G** — Generate certification reports
 
-## Documentation
-- [ ] ENTERPRISE_GAP_ANALYSIS.md
-- [ ] AI_GUARDRAILS.md
-- [ ] EXECUTIVE_DASHBOARD.md
-- [ ] NOTIFICATION_CENTER.md
-- [ ] SECURITY_AUDIT.md
-- [ ] PERFORMANCE_REPORT.md
-- [ ] RELEASE_READINESS.md
-- [ ] CHANGELOG.md
+## Regression Tests
+
+- [ ] Add test for Dockerfile correctness (referenced paths exist)
+- [ ] Add test for model path resolution to real artifact
+- [ ] Add test for conftest DB initialization
+
+## Reports
+
+- [ ] `ENTERPRISE_CERTIFICATION_GAP_ANALYSIS.md`
+- [ ] `FINAL_PRODUCTION_CERTIFICATION_REPORT.md`

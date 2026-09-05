@@ -116,6 +116,45 @@ class PredictResponse(BaseModel):
     explanation: dict[str, Any]
 
 
+class DetectRequest(BaseModel):
+    """Detection request (alias for PredictRequest with same validation)."""
+    text: str = Field(..., min_length=1, max_length=10000, description="Text to analyze")
+    source: str | None = Field(default='generic', max_length=50, description="Source of the text")
+
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        """Sanitize input text."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Text must not be empty")
+        v = v.replace("\x00", "")
+        return v
+
+
+class DetectResponse(BaseModel):
+    """Detection response with prediction, confidence, risk level, and message."""
+    prediction: str = Field(..., pattern="^(SAFE|SCAM|SUSPICIOUS)$")
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    risk_level: str = Field(..., pattern="^(LOW|MEDIUM|HIGH)$")
+    message: str
+    explanation: dict[str, Any] = Field(default_factory=dict)
+
+
+class ModelInfoResponse(BaseModel):
+    """Model information response."""
+    model_name: str
+    model_type: str
+    version: str
+    classes: list[str]
+    accuracy: float | None = None
+    precision: float | None = None
+    recall: float | None = None
+    f1_score: float | None = None
+    trained_samples: int | None = None
+    status: str
+
+
 class ScanOut(BaseModel):
     """Scan record for history display."""
     id: int
@@ -133,7 +172,3 @@ class DashboardStats(BaseModel):
     scam_percentage: float = Field(..., ge=0.0, le=100.0)
     safe_percentage: float = Field(..., ge=0.0, le=100.0)
     recent_scans: list[ScanOut]
-
-
-# (FeedbackCreate is defined above in the Prediction Schemas section)
-

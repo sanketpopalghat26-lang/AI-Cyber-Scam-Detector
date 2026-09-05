@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   db:
     image: postgres:15
@@ -15,7 +14,7 @@ services:
     build: ./backend
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-scam_user}:${POSTGRES_PASSWORD:-scam_pass}@db:5432/${POSTGRES_DB:-scamdb}
-      - MODEL_PATH=/app/model/best_model.joblib
+      - MODEL_PATH=/app/model/best_model.pkl
       - SECRET_KEY=${SECRET_KEY:-dev-only-change-in-prod}
       - APP_ENV=${APP_ENV:-development}
     ports:
@@ -23,7 +22,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ./model:/app/model:ro
+      - ./models/exports:/app/model:ro
 
   frontend:
     build: ./frontend

@@ -256,18 +256,22 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
     Sanitizes request inputs to prevent injection attacks.
     """
 
+    # Patterns target real web-injection vectors (XSS / HTML/script injection)
+    # only. Generic code keywords (e.g. "system(", "import os") are intentionally
+    # excluded because this is a text-classification API: legitimate scam and
+    # phishing messages can contain such tokens and must still be analyzable.
     DANGEROUS_PATTERNS = [
         "<script",
+        "<iframe",
+        "<object",
+        "<embed",
         "javascript:",
+        "vbscript:",
         "onerror=",
         "onload=",
         "onclick=",
-        "eval(",
-        "exec(",
-        "system(",
-        "import os",
-        "subprocess",
-        "__import__",
+        "onmouseover=",
+        "data:text/html",
     ]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:

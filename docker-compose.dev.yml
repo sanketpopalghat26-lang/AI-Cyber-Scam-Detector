@@ -38,7 +38,7 @@ services:
       - DATABASE_URL=postgresql://scam_user:scam_dev_pass@db:5432/scamdb
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=dev-secret-key-do-not-use-in-prod
-      - MODEL_PATH=/app/model/best_model.joblib
+      - MODEL_PATH=/app/model/best_model.pkl
       - APP_ENV=development
       - LOG_LEVEL=DEBUG
       - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
@@ -50,7 +50,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./model:/app/model:ro
+      - ./models/exports:/app/model:ro
       - ./backend/app:/app/app:ro
       - backend_logs:/app/logs
     develop:

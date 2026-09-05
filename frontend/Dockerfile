@@ -23,7 +23,6 @@ RUN adduser -D -g '' -u 1001 appuser
 
 # Copy built assets
 COPY --from=builder /build/dist /usr/share/nginx/html
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
 # Security: remove default nginx configs
 RUN rm -f /etc/nginx/conf.d/default.conf.bak \
