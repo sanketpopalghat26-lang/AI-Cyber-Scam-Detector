@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Builder — Install dependencies and compile assets
 # =============================================================================
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 # Pin system dependencies for reproducibility
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip==24.0 \
 # =============================================================================
 # Stage 2: Runtime — Minimal production image
 # =============================================================================
-FROM python:3.11-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 # Security: run as non-root user
 RUN groupadd -r -g 1001 appuser \
