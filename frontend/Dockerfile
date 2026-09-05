@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Builder — Install dependencies and build static assets
 # =============================================================================
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /build
 
