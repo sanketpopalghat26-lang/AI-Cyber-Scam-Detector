@@ -13,7 +13,7 @@ jobs:
     name: Container Vulnerability Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan Backend Image
         uses: aquasecurity/trivy-action@master
@@ -32,7 +32,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Upload Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-backend.sarif
 
@@ -40,10 +40,10 @@ jobs:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Python Deps
-        uses: pypa/gh-action-pip-audit@v1.0.0
+        uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: backend/requirements.txt
 
@@ -56,10 +56,10 @@ jobs:
     name: Secrets Detection
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: GitLeaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
